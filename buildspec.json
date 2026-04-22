@@ -13,7 +13,7 @@
             "baseUrl": "https://github.com/obsproject/obs-deps/releases/download",
             "label": "Pre-Built obs-deps",
             "hashes": {
-                "macos": "9403bb43fb0a9bb215739a5659ca274fe884dbbbcd22bd9ca781c961fb041c42"
+                "macos": "09cbeb3cbf4fbb9e58e4cf4ca030a724fb1be41d2d7851c8b356f476e04544db"
             }
         },
         "qt6": {
@@ -21,7 +21,7 @@
             "baseUrl": "https://github.com/obsproject/obs-deps/releases/download",
             "label": "Pre-Built Qt6",
             "hashes": {
-                "macos": "990f11638b80a4509e14e8c315f6e4caa0861e37fcd3113a256fbff835ffca29"
+                "macos": "ed70bb04a5ffc4c820d691e7f1d9913462bc4e018383e98c5548876f6dec0304"
             }
         }
     },
