@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vision Pose Overlay - Media Warp</title>
+    <style>
+        :root {
+            --bg: #1e1e2e;
+            --surface: #313244;
+            --text: #cdd6f4;
+            --accent: #89b4fa;
+            --green: #a6e3a1;
+            --red: #f38ba8;
+            --yellow: #fab387;
+        }
+
+        body {
+            background: transparent;
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .stats {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(30, 30, 46, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .label { color: var(--accent); font-weight: bold; }
+        .value { color: var(--green); font-family: monospace; }
+        
+        .status-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--red);
+            margin-right: 8px;
+        }
+        .status-dot.connected { background: var(--green); box-shadow: 0 0 10px var(--green); }
+        .status-dot.loading { background: var(--yellow); animation: pulse 1s infinite; }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="stats">
+        <div class="stat-item">
+            <span class="label"><div id="status-dot" class="status-dot"></div>Bridge:</span>
+            <span id="status-text" class="value">Disconnected</span>
+        </div>
+        <div class="stat-item">
+            <span class="label">Landmarks:</span>
+            <span id="landmark-count" class="value">0</span>
+        </div>
+        <div class="stat-item">
+            <span class="label">Latency:</span>
+            <span id="latency" class="value">0 ms</span>
+        </div>
+    </div>
+    
+    <canvas id="canvas"></canvas>
+
+    <script type="module">
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+        const landmarkCountText = document.getElementById('landmark-count');
+        const latencyText = document.getElementById('latency');
+
+        let ws = null;
+        let latestPoses = [];
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function renderLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            latestPoses.forEach(pose => {
+                const landmarks = pose.landmarks;
+                if (!landmarks) return;
+
+                ctx.fillStyle = '#fab387';
+                ctx.strokeStyle = '#fab387';
+                ctx.lineWidth = 2;
+
+                // Draw joints
+                for (const name in landmarks) {
+                    const pt = landmarks[name];
+                    ctx.beginPath();
+                    ctx.arc(pt.x * canvas.width, pt.y * canvas.height, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Draw connections (skeleton)
+                // Vision joint names are like "nose", "left_shoulder", etc.
+                const connections = [
+                    ["left_shoulder", "right_shoulder"],
+                    ["left_shoulder", "left_elbow"],
+                    ["left_elbow", "left_wrist"],
+                    ["right_shoulder", "right_elbow"],
+                    ["right_elbow", "right_wrist"],
+                    ["left_shoulder", "left_hip"],
+                    ["right_shoulder", "right_hip"],
+                    ["left_hip", "right_hip"],
+                    ["left_hip", "left_knee"],
+                    ["left_knee", "left_ankle"],
+                    ["right_hip", "right_knee"],
+                    ["right_knee", "right_ankle"],
+                    ["left_shoulder", "neck"],
+                    ["right_shoulder", "neck"],
+                    ["neck", "nose"],
+                    ["nose", "left_eye"],
+                    ["nose", "right_eye"],
+                    ["left_eye", "left_ear"],
+                    ["right_eye", "right_ear"]
+                ];
+
+                connections.forEach(([a, b]) => {
+                    const p1 = landmarks[a];
+                    const p2 = landmarks[b];
+                    if (p1 && p2 && p1.c > 0.3 && p2.c > 0.3) {
+                        ctx.beginPath();
+                        ctx.moveTo(p1.x * canvas.width, p1.y * canvas.height);
+                        ctx.lineTo(p2.x * canvas.width, p2.y * canvas.height);
+                        ctx.stroke();
+                    }
+                });
+            });
+
+            requestAnimationFrame(renderLoop);
+        }
+        requestAnimationFrame(renderLoop);
+
+        async function connect() {
+            if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+            
+            const ports = [4466, 4477, 12348, 8089];
+            let wsPort = null;
+            
+            for (const port of ports) {
+                try {
+                    const res = await fetch(`http://127.0.0.1:${port}/__lws/ws_port`);
+                    if (res.ok) { 
+                        wsPort = (await res.text()).trim(); 
+                        break; 
+                    }
+                } catch (e) {}
+            }
+            
+            if (wsPort) {
+                startWS(wsPort);
+            } else {
+                statusText.textContent = 'Searching...';
+                setTimeout(connect, 2000);
+            }
+        }
+
+        function startWS(port) {
+            ws = new WebSocket(`ws://127.0.0.1:${port}/ws`);
+            ws.onopen = () => {
+                statusDot.classList.add('connected');
+                statusText.textContent = `Connected (${port})`;
+            };
+            ws.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                if (data.t === 'pose') {
+                    latestPoses = JSON.parse(data.v);
+                    landmarkCountText.textContent = latestPoses.length > 0 ? Object.keys(latestPoses[0].landmarks).length : 0;
+                }
+            };
+            ws.onclose = () => {
+                statusDot.classList.remove('connected');
+                statusText.textContent = 'Disconnected';
+                setTimeout(connect, 2000);
+            };
+        }
+
+        connect();
+    </script>
+</body>
+</html>
