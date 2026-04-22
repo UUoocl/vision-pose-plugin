@@ -11,7 +11,11 @@ include(helpers)
 # Cross-platform dependency discovery
 find_package(libobs REQUIRED)
 
-add_library(${PROJECT_NAME} MODULE)
+add_library(${PROJECT_NAME} MODULE
+    vision-pose-plugin.cpp
+    VisionProcessor.h
+    VisionProcessor.mm
+)
 
 # Disable warnings as errors
 add_compile_options(-Wno-error)
@@ -43,10 +47,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     PREFIX ""
 )
 
-target_sources(${PROJECT_NAME} PRIVATE
-    vision-pose-plugin.cpp
-    VisionProcessor.h
-    VisionProcessor.mm
-)
+# Sources are already added in add_library
 
 set_target_properties_plugin(${PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
