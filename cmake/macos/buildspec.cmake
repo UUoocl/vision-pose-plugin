@@ -6,7 +6,7 @@ include(buildspec_common)
 
 # _check_dependencies_macos: Set up macOS slice for _check_dependencies
 function(_check_dependencies_macos)
-  set(arch universal)
+  set(arch arm64)
   set(platform macos)
 
   file(READ "${CMAKE_CURRENT_SOURCE_DIR}/buildspec.json" buildspec)
