@@ -12,9 +12,9 @@ include(helpers)
 find_package(libobs REQUIRED)
 
 add_library(${PROJECT_NAME} MODULE
-    vision-pose-plugin.cpp
-    VisionProcessor.h
-    VisionProcessor.mm
+    "${CMAKE_CURRENT_SOURCE_DIR}/vision-pose-plugin.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/VisionProcessor.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/VisionProcessor.mm"
 )
 
 # Disable warnings as errors
