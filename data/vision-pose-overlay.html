@@ -168,43 +168,37 @@
         }
         requestAnimationFrame(renderLoop);
 
+        const params = new URLSearchParams(window.location.search);
+        const targetTopic = params.get('topic') || 'pose_landmarks';
+        let lastTime = performance.now();
+
         async function connect() {
             if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
             
-            const ports = [4466, 4477, 12348, 8089];
-            let wsPort = null;
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/${targetTopic}`;
             
-            for (const port of ports) {
-                try {
-                    const res = await fetch(`http://127.0.0.1:${port}/__lws/ws_port`);
-                    if (res.ok) { 
-                        wsPort = (await res.text()).trim(); 
-                        break; 
-                    }
-                } catch (e) {}
-            }
+            console.log("Connecting to:", wsUrl);
+            ws = new WebSocket(wsUrl);
             
-            if (wsPort) {
-                startWS(wsPort);
-            } else {
-                statusText.textContent = 'Searching...';
-                setTimeout(connect, 2000);
-            }
-        }
-
-        function startWS(port) {
-            ws = new WebSocket(`ws://127.0.0.1:${port}/ws`);
             ws.onopen = () => {
                 statusDot.classList.add('connected');
-                statusText.textContent = `Connected (${port})`;
+                statusText.textContent = `Connected (${targetTopic})`;
             };
+
             ws.onmessage = (e) => {
-                const data = JSON.parse(e.data);
-                if (data.t === 'pose') {
-                    latestPoses = JSON.parse(data.v);
+                const now = performance.now();
+                latencyText.textContent = `${Math.round(now - lastTime)} ms`;
+                lastTime = now;
+
+                try {
+                    latestPoses = JSON.parse(e.data);
                     landmarkCountText.textContent = latestPoses.length > 0 ? Object.keys(latestPoses[0].landmarks).length : 0;
+                } catch (err) {
+                    console.error("Failed to parse pose data:", err);
                 }
             };
+
             ws.onclose = () => {
                 statusDot.classList.remove('connected');
                 statusText.textContent = 'Disconnected';

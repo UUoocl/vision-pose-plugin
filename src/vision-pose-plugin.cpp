@@ -61,22 +61,17 @@ static struct obs_source_frame *vision_pose_video(void *data, struct obs_source_
     std::string landmarks_json = state->processor->processFrame(frame);
 
     if (!landmarks_json.empty()) {
-        obs_data_t *packet = obs_data_create();
-        obs_data_set_string(packet, "t", "pose");
-        obs_data_set_string(packet, "v", landmarks_json.c_str());
-        obs_data_set_string(packet, "a", state->topic.c_str());
-        
         calldata_t cd;
         calldata_init(&cd);
-        calldata_set_ptr(&cd, "packet", packet);
+        calldata_set_string(&cd, "data", landmarks_json.c_str());
+        calldata_set_string(&cd, "topic", state->topic.c_str());
         
         signal_handler_t *sh = obs_get_signal_handler();
         if (sh) {
-            signal_handler_signal(sh, "media_warp_transmit", &cd);
+            signal_handler_signal(sh, "media_warp_transmit_topic", &cd);
         }
         
         calldata_free(&cd);
-        obs_data_release(packet);
     }
 
     return frame;

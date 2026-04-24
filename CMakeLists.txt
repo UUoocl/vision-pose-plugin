@@ -40,7 +40,7 @@ if(APPLE)
         "-framework Foundation"
     )
     
-    set_source_files_properties(VisionProcessor.mm PROPERTIES COMPILE_FLAGS "-fobjc-arc")
+    set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/src/VisionProcessor.mm" PROPERTIES COMPILE_FLAGS "-fobjc-arc")
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

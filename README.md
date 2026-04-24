@@ -5,10 +5,9 @@ A high-performance OBS plugin for macOS Apple Silicon that utilizes Apple's nati
 ## Features
 
 - **Native Vision Integration**: Leverages Apple's hardware-accelerated Vision framework for low-latency pose detection.
-- **Apple Silicon Optimized**: Built specifically for M-series chips to maximize performance and efficiency.
-- **Real-time Data Streaming**: Transmits landmark coordinates (JSON) via a centralized WebSocket bridge.
-- **Low Overhead**: Efficient frame capturing and processing to maintain high OBS frame rates.
-- **Seamless mediaWarp Integration**: Compatible with `media-warp-transmit` signal protocols.
+- **Real-time Data Streaming**: Transmits landmark coordinates as raw JSON arrays to the `pose_landmarks` topic.
+- **Unified Port Connection**: Overlays connect via the standardized `ws://${window.location.host}/ws/pose_landmarks` endpoint.
+- **Topic-Based Efficiency**: Uses the `media_warp_transmit_topic` signal to ensure data only reaches active pose observers.
 
 ## Installation
 
